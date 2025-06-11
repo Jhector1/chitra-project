@@ -6,19 +6,18 @@ const path    = require('path');
 require('dotenv').config();
 
 const {
-  DATABASE_URL,        // Render injects this when you "Connect Database"
+  DATABASE_URL,        // Injected by Render when you "Connect Database"
   PORT = 5000
 } = process.env;
 
-// Create a connection pool using the DATABASE_URL
-// On Render you need SSL: rejectUnauthorized false
+// 1) Create a Postgres connection pool using the injected URL
 const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
+// 2) Ensure the table exists and seed it if empty
 async function ensureTableAndSeed() {
-  // Create table if missing
   await pool.query(`
     CREATE TABLE IF NOT EXISTS dim_product (
       id         INT PRIMARY KEY,
@@ -33,18 +32,14 @@ async function ensureTableAndSeed() {
   await pool.query(`
     INSERT INTO dim_product (id, name, category, price, adjustment)
     SELECT 1, 'Product A', 'Category 1', 100.0, 0.0
-    WHERE NOT EXISTS (
-      SELECT 1 FROM dim_product WHERE id = 1
-    );
+    WHERE NOT EXISTS (SELECT 1 FROM dim_product WHERE id = 1);
   `);
 
   // Seed row #2
   await pool.query(`
     INSERT INTO dim_product (id, name, category, price, adjustment)
     SELECT 2, 'Product B', 'Category 2', 200.0, 0.0
-    WHERE NOT EXISTS (
-      SELECT 1 FROM dim_product WHERE id = 2
-    );
+    WHERE NOT EXISTS (SELECT 1 FROM dim_product WHERE id = 2);
   `);
 
   console.log('✅ Table & seed data ready.');
@@ -52,17 +47,19 @@ async function ensureTableAndSeed() {
 
 (async () => {
   try {
+    // Initialize DB & table
     await ensureTableAndSeed();
   } catch (err) {
     console.error('Initialization error:', err);
     process.exit(1);
   }
 
+  // 3) Set up Express
   const app = express();
   app.use(cors());
   app.use(express.json());
 
-  // ──────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────
   // API: Get schema
   app.get('/api/schema', async (req, res) => {
     try {
@@ -86,7 +83,7 @@ async function ensureTableAndSeed() {
     }
   });
 
-  // ──────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────
   // API: Get data
   app.get('/api/data', async (req, res) => {
     try {
@@ -98,7 +95,7 @@ async function ensureTableAndSeed() {
     }
   });
 
-  // ──────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────
   // API: Save updates
   app.post('/api/save', async (req, res) => {
     try {
@@ -115,17 +112,18 @@ async function ensureTableAndSeed() {
     }
   });
 
-  // ──────────────────────────────────────────────────────
-  // Serve your Vite build output from /dist
+  // ─────────────────────────────────────────────────
+  // 4) Serve Vite’s production build from /dist
   app.use(express.static(path.join(__dirname, 'dist')));
-  app.get('/*', (req, res) => {
+
+  // 5) Catch-all for client-side routing—must be '*' not '/*'
+  app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
   });
 
-  // ──────────────────────────────────────────────────────
-  // Start the server
+  // ─────────────────────────────────────────────────
+  // 6) Start the server
   app.listen(PORT, () => {
     console.log(`🚀 Server listening on http://localhost:${PORT}`);
   });
-
 })();
