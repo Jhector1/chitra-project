@@ -2,14 +2,11 @@
   "name": "ssas-project",
   "private": true,
   "version": "0.0.0",
-
-  
   "scripts": {
-    "dev":   "vite",                      
-    "build": "vite build",             
-    "start": "npm run build && node server.js"  
+    "dev": "vite",
+    "build": "vite build",
+    "start": "npm run build && node server.js"
   },
-
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
@@ -20,10 +17,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "msnodesqlv8": "^4.5.0",
-    "mssql": "^11.0.1",
-    "mysql2": "^3.14.1",
     "path": "^0.12.7",
+    "pg": "^8.16.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
