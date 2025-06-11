@@ -1,114 +1,82 @@
 // server.js
 const express = require('express');
-const cors = require('cors');
-const mysql = require('mysql2/promise');
+const cors    = require('cors');
+const { Pool } = require('pg');
+const path    = require('path');
 require('dotenv').config();
 
 const {
-  DB_HOST = 'localhost',
-  DB_PORT = 3306,
-  DB_USER = 'root',
-  DB_PASSWORD = '',
-  DB_NAME = 'MyDatabase',
+  DATABASE_URL,        // Render injects this when you "Connect Database"
   PORT = 5000
 } = process.env;
 
-async function ensureDbAndTable() {
-  // 1) Connect WITHOUT a database
-  const adminConn = await mysql.createConnection({
-    host: DB_HOST,
-    port: DB_PORT,
-    user: DB_USER,
-    password: DB_PASSWORD
-  });
+// Create a connection pool using the DATABASE_URL
+// On Render you need SSL: rejectUnauthorized false
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
-  // 2) Create the database if it doesn't exist
-  await adminConn.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
-  console.log(`✅ Database ensured: ${DB_NAME}`);
-
-  // 3) Switch to the new database
-  await adminConn.changeUser({ database: DB_NAME });
-
-  // 4) Create the dim_Product table if missing
-  await adminConn.query(`
-    CREATE TABLE IF NOT EXISTS dim_Product (
-      id INT PRIMARY KEY,
-      name VARCHAR(100),
-      category VARCHAR(100),
-      price FLOAT,
-      adjustment FLOAT
+async function ensureTableAndSeed() {
+  // Create table if missing
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS dim_product (
+      id         INT PRIMARY KEY,
+      name       VARCHAR(100),
+      category   VARCHAR(100),
+      price      REAL,
+      adjustment REAL DEFAULT 0
     );
   `);
 
-  // 5) Seed sample rows if empty
-  await adminConn.query(`
-    INSERT INTO dim_Product (id, name, category, price, adjustment)
+  // Seed row #1
+  await pool.query(`
+    INSERT INTO dim_product (id, name, category, price, adjustment)
     SELECT 1, 'Product A', 'Category 1', 100.0, 0.0
-    WHERE NOT EXISTS (SELECT 1 FROM dim_Product WHERE id = 1);
-  `);
-  await adminConn.query(`
-    INSERT INTO dim_Product (id, name, category, price, adjustment)
-    SELECT 2, 'Product B', 'Category 2', 200.0, 0.0
-    WHERE NOT EXISTS (SELECT 1 FROM dim_Product WHERE id = 2);
+    WHERE NOT EXISTS (
+      SELECT 1 FROM dim_product WHERE id = 1
+    );
   `);
 
-  await adminConn.end();
-  console.log(`✅ Table & seed data ready.`);
+  // Seed row #2
+  await pool.query(`
+    INSERT INTO dim_product (id, name, category, price, adjustment)
+    SELECT 2, 'Product B', 'Category 2', 200.0, 0.0
+    WHERE NOT EXISTS (
+      SELECT 1 FROM dim_product WHERE id = 2
+    );
+  `);
+
+  console.log('✅ Table & seed data ready.');
 }
 
 (async () => {
-  // Ensure DB + Table
   try {
-    await ensureDbAndTable();
+    await ensureTableAndSeed();
   } catch (err) {
     console.error('Initialization error:', err);
     process.exit(1);
   }
 
-  // 6) Create a pool pointing at your (now-existing) database
-  const pool = mysql.createPool({
-    host: DB_HOST,
-    port: DB_PORT,
-    user: DB_USER,
-    password: DB_PASSWORD,
-    database: DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10
-  });
-
-  // 7) Set up Express
   const app = express();
   app.use(cors());
   app.use(express.json());
 
-
-const path = require('path')
-
-//  ────────────────────────────────────────────────────────────────
-//  ❐ Serve Vite’s production build under /dist
-app.use(express.static(path.join(__dirname, 'dist')))
-
-//  ────────────────────────────────────────────────────────────────
-//  ❐ For all other GET requests, send back index.html so client-side routing works
-app.get('/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'))
-})
-
-
-  // Fetch table schema
+  // ──────────────────────────────────────────────────────
+  // API: Get schema
   app.get('/api/schema', async (req, res) => {
     try {
-      const [rows] = await pool.query(`
-        SELECT COLUMN_NAME, DATA_TYPE
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = 'dim_Product'
+      const { rows } = await pool.query(`
+        SELECT column_name, data_type
+        FROM information_schema.columns
+        WHERE table_name = 'dim_product';
       `);
       const schema = {
-        columns: rows.map(col => ({
-          headerName: col.COLUMN_NAME,
-          field: col.COLUMN_NAME,
-          dataType: ['int','float','double','decimal'].includes(col.DATA_TYPE) ? 'float' : 'string',
-          editable: col.COLUMN_NAME === 'adjustment'
+        columns: rows.map(c => ({
+          headerName: c.column_name,
+          field:      c.column_name,
+          dataType:   /int|real/.test(c.data_type) ? 'float' : 'string',
+          editable:   c.column_name === 'adjustment'
         }))
       };
       res.json(schema);
@@ -118,10 +86,11 @@ app.get('/*', (req, res) => {
     }
   });
 
-  // Fetch all data
+  // ──────────────────────────────────────────────────────
+  // API: Get data
   app.get('/api/data', async (req, res) => {
     try {
-      const [rows] = await pool.query('SELECT * FROM dim_Product');
+      const { rows } = await pool.query('SELECT * FROM dim_product;');
       res.json(rows);
     } catch (err) {
       console.error('Data error:', err);
@@ -129,18 +98,16 @@ app.get('/*', (req, res) => {
     }
   });
 
-  // Save updates
+  // ──────────────────────────────────────────────────────
+  // API: Save updates
   app.post('/api/save', async (req, res) => {
     try {
-      const updates = req.body;
-      const conn = await pool.getConnection();
-      for (const { id, adjustment } of updates) {
-        await conn.query(
-          `UPDATE dim_Product SET adjustment = ? WHERE id = ?`,
+      for (const { id, adjustment } of req.body) {
+        await pool.query(
+          `UPDATE dim_product SET adjustment = $1 WHERE id = $2;`,
           [adjustment, id]
         );
       }
-      conn.release();
       res.sendStatus(200);
     } catch (err) {
       console.error('Save error:', err);
@@ -148,8 +115,17 @@ app.get('/*', (req, res) => {
     }
   });
 
-  // Start server
+  // ──────────────────────────────────────────────────────
+  // Serve your Vite build output from /dist
+  app.use(express.static(path.join(__dirname, 'dist')));
+  app.get('/*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
+
+  // ──────────────────────────────────────────────────────
+  // Start the server
   app.listen(PORT, () => {
     console.log(`🚀 Server listening on http://localhost:${PORT}`);
   });
+
 })();
