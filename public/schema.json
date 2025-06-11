@@ -1,0 +1,60 @@
+{
+    "columns": [
+      {
+        "headerName": "Year",
+        "field": "year",
+        "dataType": "string",
+        "editable": false
+      },
+      {
+        "headerName": "Month",
+        "field": "month",
+        "dataType": "string",
+        "editable": false
+      },
+      {
+        "headerName": "Customer",
+        "field": "customer",
+        "dataType": "string",
+        "editable": false
+      },
+      {
+        "headerName": "Product",
+        "field": "product",
+        "dataType": "string",
+        "editable": false
+      },
+      {
+        "headerName": "Currency",
+        "field": "currency",
+        "dataType": "string",
+        "editable": false
+      },
+      {
+        "headerName": "Scenario",
+        "field": "scenario",
+        "dataType": "string",
+        "editable": false
+      },
+      {
+        "headerName": "Historical Sales",
+        "field": "historicalSales",
+        "dataType": "float",
+        "editable": false
+      },
+      {
+        "headerName": "Adjustment",
+        "field": "adjustment",
+        "dataType": "float",
+        "editable": true
+      },
+      {
+        "headerName": "Total Sales",
+        "field": "totalSales",
+        "dataType": "float",
+        "computed": true,
+        "sourceColumns": ["historicalSales", "adjustment"]
+      }
+    ]
+  }
+  

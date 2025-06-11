@@ -1,0 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap');
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Open Sans', sans-serif;
+  background-color: #f5f7fa; /* Light background */
+  color: #333;
+  box-sizing: border-box;
+}
+
+/* Ensure all elements use box-sizing: border-box */
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+/* Parent container fills the full viewport */
+.editable-grid-container {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e2e5ec 100%);
+}
+
+/* Title at the top, centered */
+.editable-grid-header {
+  text-align: center;
+  margin: 20px 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+/* Button row: horizontally center buttons with spacing */
+.editable-grid-button-row {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+/* Button styling: modern, hover & active states */
+.editable-grid-button-row button {
+  background-color: #3498db;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.editable-grid-button-row button:hover {
+  background-color: #2980b9;
+}
+
+.editable-grid-button-row button:active {
+  transform: scale(0.98);
+}
+
+/* 
+  Table wrapper occupies all remaining space
+  and spans the entire width.
+*/
+.editable-grid-table-wrapper {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0 10px 20px;
+  box-sizing: border-box;
+}
+
+/*
+  Scrollable container so we can style 
+  horizontal/vertical scrollbars distinctly.
+*/
+.scrollable-table-container {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  border-radius: 4px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  background: #fff; 
+}
+
+/* 
+  Make the AG Grid fully expand inside its container
+  so it fills whatever space we have.
+*/
+.ag-theme-alpine {
+  width: 100%;
+  height: 100%;
+}
+
+/* Custom scrollbar styling for the container */
+.scrollable-table-container::-webkit-scrollbar {
+  width: 10px;    /* vertical scrollbar width */
+  height: 10px;   /* horizontal scrollbar height */
+  background-color: #e1e1e1;
+}
+
+.scrollable-table-container::-webkit-scrollbar-thumb {
+  background-color: #b2bec3;
+  border-radius: 5px;
+}
+
+.scrollable-table-container::-webkit-scrollbar-thumb:hover {
+  background-color: #95a5a6;
+}
+
+/* Optional custom vertical scrollbar inside the grid viewport */
+.ag-theme-alpine .ag-body-viewport::-webkit-scrollbar {
+  width: 10px;
+  background-color: #e1e1e1;
+}
+
+.ag-theme-alpine .ag-body-viewport::-webkit-scrollbar-thumb {
+  background-color: #b2bec3;
+  border-radius: 5px;
+}
+
+.ag-theme-alpine .ag-body-viewport::-webkit-scrollbar-thumb:hover {
+  background-color: #95a5a6;
+}
