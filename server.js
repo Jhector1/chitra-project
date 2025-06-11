@@ -6,15 +6,17 @@ const path    = require('path');
 require('dotenv').config();
 
 const {
-  DATABASE_URL,
+  DATABASE_URL,        // injected by Render when you "Connect Database"
   PORT = 5000
 } = process.env;
 
+// 1) Create a Postgres pool
 const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
+// 2) Ensure table + seed
 async function ensureTableAndSeed() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS dim_product (
@@ -46,11 +48,12 @@ async function ensureTableAndSeed() {
     process.exit(1);
   }
 
+  // 3) Express setup
   const app = express();
   app.use(cors());
   app.use(express.json());
 
-  // ─ API ROUTES ──────────────────────────────────────────────
+  // ── API ROUTES ────────────────────────────────────────────────
   app.get('/api/schema', async (req, res) => {
     try {
       const { rows } = await pool.query(`
@@ -97,14 +100,16 @@ async function ensureTableAndSeed() {
     }
   });
 
-  // ─ STATIC & SPA FALLBACK ────────────────────────────────────
+  // ── STATIC & SPA FALLBACK ─────────────────────────────────────
+  // Serve the built client
   app.use(express.static(path.join(__dirname, 'dist')));
-  // *** THIS MUST BE '*' (no slash) ***
-  app.get('*', (req, res) => {
+
+  // Regex catch-all for client-side routing:
+  app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
   });
 
-  // ─ START ───────────────────────────────────────────────────
+  // ── START SERVER ─────────────────────────────────────────────
   app.listen(PORT, () => {
     console.log(`🚀 Server listening on http://localhost:${PORT}`);
   });
