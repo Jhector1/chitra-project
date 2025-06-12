@@ -48,7 +48,7 @@ FROM [YourCube]
 
 // Helper: Load JSON from public folder based on MDX query.
 async function runMdxQuery(mdxQuery) {
-  const baseUrl = process.env.SERVER_URL;
+const baseUrl = import.meta.env.VITE_SERVER_URL;
   try {
     const url = mdxQuery.includes("YourSchemaDimension")
       ? `${baseUrl}/api/schema`
@@ -86,7 +86,7 @@ const EditableGrid = () => {
   useEffect(() => {
     fetchSchema();
   }, []);
-
+ 
   const fetchSchema = async () => {
     setLoadingSchema(true);
     try {
