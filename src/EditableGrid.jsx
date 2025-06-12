@@ -48,10 +48,11 @@ FROM [YourCube]
 
 // Helper: Load JSON from public folder based on MDX query.
 async function runMdxQuery(mdxQuery) {
+  const baseUrl = process.env.SERVER_URL;
   try {
     const url = mdxQuery.includes("YourSchemaDimension")
-      ? "http://localhost:5000/api/schema"
-      : "http://localhost:5000/api/data";
+      ? `${baseUrl}/api/schema`
+      : `${baseUrl}/api/data`;
     console.log("Fetching URL:", url);
     const response = await fetch(url);
     if (!response.ok) {
